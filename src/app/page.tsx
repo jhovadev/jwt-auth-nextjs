@@ -1,101 +1,239 @@
+"use client";
+import { Skeleton } from "@/components/ui/skeleton";
+
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { set, useForm } from "react-hook-form";
+import { z } from "zod";
+
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import {
+	Form,
+	FormControl,
+	FormDescription,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+
+import {
+	InputOTP,
+	InputOTPGroup,
+	InputOTPSlot,
+} from "@/components/ui/input-otp";
 import Image from "next/image";
+import { Suspense, useState } from "react";
+import { generateTOTP } from "@oslojs/otp";
+import { decodeBase32 } from "@oslojs/encoding";
+
+const FormSchema = z.object({
+	pin: z.string().min(6, {
+		message: "Your one-time password must be 6 characters.",
+	}),
+});
+
+const userSchema = z.object({
+	username: z.string().min(3, {
+		message: "Your Username must be at least 3 characters.",
+	}),
+});
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+	const form = useForm<z.infer<typeof FormSchema>>({
+		resolver: zodResolver(FormSchema),
+		defaultValues: {
+			pin: "",
+		},
+	});
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+	const userform = useForm<z.infer<typeof userSchema>>({
+		resolver: zodResolver(userSchema),
+		defaultValues: {
+			username: "",
+		},
+	});
+
+	const { toast } = useToast();
+
+	const [image, setImage] = useState<string>("");
+	const [token, setToken] = useState<string>("");
+	const [serverToken, setServerToken] = useState<string>("");
+	const [secret, setSecret] = useState<string>("");
+
+	async function onSubmitUser(data: z.infer<typeof userSchema>) {
+		const response = await fetch("/api/v1/totp/generate", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ accountName: data.username }),
+		});
+		const responseJson = await response.json();
+
+		setImage(responseJson.data);
+		setSecret(responseJson.secret);
+		toast({
+			title: "You submitted the following values:",
+			description: (
+				<pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
+					<code className="text-white">
+						{JSON.stringify(responseJson, null, 2)}
+					</code>
+				</pre>
+			),
+		});
+	}
+
+	async function onSubmitToken(data: z.infer<typeof FormSchema>) {
+		const totp = generateTOTP(decodeBase32(secret), 30, 6);
+		setServerToken(totp);
+
+		const response = await fetch("/api/v1/totp/verify", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				token: data.pin,
+				secret: secret,
+			}),
+		});
+		const responseJson = await response.json();
+		toast({
+			title: "You submitted the following values:",
+			description: (
+				<pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4">
+					<code className="text-white">
+						{JSON.stringify(responseJson, null, 2)}
+					</code>
+				</pre>
+			),
+		});
+	}
+
+	return (
+		<>
+			<div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4 py-12 sm:px-6 lg:px-8">
+				<h1 className="scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl">
+					TOTP : Authentication NextJS Example
+				</h1>
+
+				<div className="grid grid-cols-2 gap-6">
+					<Card>
+						<CardHeader>
+							<CardTitle>Enable 2FA Autentication</CardTitle>
+							<CardDescription>Scan the QR Code</CardDescription>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<Form {...form}>
+								<form
+									onSubmit={userform.handleSubmit(onSubmitUser)}
+									className="space-y-4"
+								>
+									<FormField
+										control={userform.control}
+										name="username"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Username</FormLabel>
+												<FormControl>
+													<Input
+														placeholder="shadcn"
+														{...field}
+													/>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+									<Button type="submit">Activar 2FA</Button>
+								</form>
+							</Form>
+							<div className="flex w-full justify-center">
+								{image === "" ? (
+									<Skeleton className="h-[260px] w-[260px] rounded-sm" />
+								) : (
+									<Image
+										src={image}
+										alt="QR Code"
+										width={260}
+										height={260}
+										className="rounded-sm"
+										priority
+									/>
+								)}
+							</div>
+						</CardContent>
+					</Card>
+					<Card>
+						<CardHeader>
+							<CardTitle>Verify ur OTP</CardTitle>
+							<CardDescription>
+								Server OTP :
+								<code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm font-semibold">
+									{serverToken}
+								</code>
+							</CardDescription>
+						</CardHeader>
+						<CardContent className="flex w-full flex-col items-center justify-center">
+							<Form {...form}>
+								<form
+									onSubmit={form.handleSubmit(onSubmitToken)}
+									className="w-2/3 space-y-6"
+								>
+									<FormField
+										control={form.control}
+										name="pin"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>One-Time Password</FormLabel>
+												<FormControl>
+													<InputOTP
+														maxLength={6}
+														{...field}
+													>
+														<InputOTPGroup>
+															<InputOTPSlot index={0} />
+															<InputOTPSlot index={1} />
+															<InputOTPSlot index={2} />
+															<InputOTPSlot index={3} />
+															<InputOTPSlot index={4} />
+															<InputOTPSlot index={5} />
+														</InputOTPGroup>
+													</InputOTP>
+												</FormControl>
+												<FormDescription>
+													Please enter the one-time password from your
+													authentication app.
+												</FormDescription>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+									<Button type="submit">Submit</Button>
+								</form>
+							</Form>
+						</CardContent>
+					</Card>
+				</div>
+			</div>
+		</>
+	);
 }

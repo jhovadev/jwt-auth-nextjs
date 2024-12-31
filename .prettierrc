@@ -1,0 +1,15 @@
+{
+    "singleAttributePerLine": true,
+    "endOfLine": "auto",
+    "printWidth": 80,
+    "useTabs": true,
+    "trailingComma": "es5",
+    "tabWidth": 2,
+    "parser":"babel-ts",
+    "arrowParens": "always",
+    "semi": true,
+    
+   "plugins": [
+        "prettier-plugin-tailwindcss"
+    ]
+}

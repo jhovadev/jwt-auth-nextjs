@@ -23,9 +23,6 @@ const REFRESH_SECRET = new TextEncoder().encode(
 	process.env.JWT_REFRESH_SECRET!
 );
 
-export const JWT_EXPIRES_IN = 60 * 1;
-export const JWT_REFRESH_EXPIRES_IN = 60 * 2;
-
 export async function getUserByIdFromDb(id: number) {
 	return await db.query.userTable.findFirst({
 		where: eq(userTable.id, id),
@@ -174,7 +171,7 @@ export async function generateAccessToken(id: number) {
 	return await new SignJWT(payload)
 		.setProtectedHeader({ alg: "HS256" })
 		.setIssuedAt()
-		.setExpirationTime(JWT_EXPIRES_IN)
+		.setExpirationTime("2m")
 		.sign(SECRET);
 }
 
@@ -186,7 +183,7 @@ export async function generateRefreshToken(id: number) {
 	return await new SignJWT(refreshPayload)
 		.setProtectedHeader({ alg: "HS256" })
 		.setIssuedAt()
-		.setExpirationTime(JWT_REFRESH_EXPIRES_IN)
+		.setExpirationTime("5m")
 		.sign(REFRESH_SECRET);
 }
 

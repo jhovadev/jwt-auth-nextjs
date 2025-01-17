@@ -7,6 +7,8 @@ import {
 	integer,
 	index,
 } from "drizzle-orm/sqlite-core";
+/* import { createid } from '@paralel/uuid'; */
+
 
 export const userTable = sqliteTable("user", {
 	id: integer("id").primaryKey({ autoIncrement: true }).notNull(),

@@ -1,13 +1,6 @@
-"use server";
 import { NextRequest, NextResponse } from "next/server";
 import { verify } from "@node-rs/argon2";
-import {
-	getUserByEmailFromDb,
-	insertSession,
-	jwt_,
-	JWT_EXPIRES_IN,
-	JWT_REFRESH_EXPIRES_IN,
-} from "@/utils/jwt_";
+import { getUserByEmailFromDb, insertSession, jwt_ } from "@/utils/jwt_";
 
 export async function POST(req: NextRequest) {
 	try {
@@ -34,7 +27,7 @@ export async function POST(req: NextRequest) {
 			httpOnly: true,
 			secure: process.env.NODE_ENV === "production",
 			sameSite: "strict",
-			maxAge: JWT_EXPIRES_IN,
+			maxAge: 60 * 2,
 			path: "/",
 		});
 
@@ -42,7 +35,7 @@ export async function POST(req: NextRequest) {
 			httpOnly: true,
 			secure: process.env.NODE_ENV === "production",
 			sameSite: "strict",
-			maxAge: JWT_REFRESH_EXPIRES_IN,
+			maxAge: 60 * 60 * 24 * 30 * 5,
 			path: "/",
 		});
 		// insertar session
@@ -50,7 +43,7 @@ export async function POST(req: NextRequest) {
 		const session = await insertSession({
 			userId: user.id,
 			refresh_token: refreshToken,
-			expiresAt: new Date(Date.now() + JWT_REFRESH_EXPIRES_IN * 1000),
+			expiresAt: new Date(Date.now() + 60 * 5 * 1000),
 		});
 
 		console.log("Session Creada: ", session);
@@ -66,6 +59,6 @@ export async function POST(req: NextRequest) {
 		}
 
 		console.log(error);
-		return Response.json({ errorType: "unknown", status: 500 });
+		return Response.json({ errorType: "unknown", status: 500, message: error });
 	}
 }

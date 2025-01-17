@@ -1,3 +1,4 @@
+"use client";
 import { Skeleton } from "@/components/ui/skeleton";
 import Countdown from "react-countdown";
 
@@ -12,20 +13,23 @@ import {
 
 import { Key, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
-/* import { useEffect, useState } from "react"; */
+import { useEffect, useState } from "react";
 
-export default async function Page() {
-	/* const [data, setData] = useState<any>(null); */
+export default function Page() {
+	const [data, setData] = useState<any>(null);
 
-	/* useEffect(() => { */
-	const data = await fetch("/api/v1/me")
-		.then((res) => res.json())
-		.then((data) => {
-			console.log(data);
-			return data;
-			/* setData(data); */
-		});
-	/* }, []); */
+	useEffect(() => {
+		const main = async () => {
+			const data = await fetch("/api/v1/me")
+				.then((res) => res.json())
+				.then((data) => {
+					console.log(data);
+					setData(data);
+					return data;
+				});
+		};
+		main();
+	}, []);
 
 	return (
 		<div>

@@ -1,0 +1,5 @@
+{
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "errorLens.codeLensEnabled": true,
+    "errorLens.enabled": true,
+}
